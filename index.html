@@ -6,6 +6,7 @@
 
 <style>
 body {
+  margin: 0;
   font-family: Arial;
   background: #0f172a;
   color: white;
@@ -19,18 +20,13 @@ body {
   background: #1e293b;
   padding: 30px;
   border-radius: 16px;
-  width: 320px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-}
-
-h2 {
-  text-align: center;
+  width: 350px;
 }
 
 input {
   width: 100%;
   padding: 10px;
-  margin-top: 10px;
+  margin-top: 8px;
   border-radius: 8px;
   border: none;
 }
@@ -51,14 +47,13 @@ button:hover {
   background: #16a34a;
 }
 
-.loading {
-  text-align: center;
+.status {
   margin-top: 10px;
-  display: none;
+  font-size: 14px;
 }
 </style>
-
 </head>
+
 <body>
 
 <div class="card">
@@ -70,18 +65,18 @@ button:hover {
   <label>Дата по:</label>
   <input type="date" id="to">
 
-  <button onclick="download()">Скачать CSV</button>
+  <button onclick="loadData()">Скачать CSV</button>
 
-  <div class="loading" id="loading">⏳ Загружаю...</div>
+  <div class="status" id="status"></div>
 </div>
 
 <script>
-function formatDate(date) {
+function format(date) {
   const d = new Date(date);
   return d.toLocaleDateString("ru-RU");
 }
 
-function download() {
+async function loadData() {
   const from = document.getElementById("from").value;
   const to = document.getElementById("to").value;
 
@@ -90,15 +85,61 @@ function download() {
     return;
   }
 
-  document.getElementById("loading").style.display = "block";
+  document.getElementById("status").innerText = "⏳ Загружаю...";
 
-  const url = `/api/download?from=${formatDate(from)}&to=${formatDate(to)}`;
+  let page = 1;
+  let all = [];
 
-  window.location.href = url;
+  while (true) {
+    const url =
+      `https://token.qoldau.kz/ru/references/crypto-currency/list?flCryptoCurrencyType=BTC&flDate_from=${format(from)}&flDate_to=${format(to)}&p=${page}`;
 
-  setTimeout(() => {
-    document.getElementById("loading").style.display = "none";
-  }, 2000);
+    const res = await fetch(url);
+    const html = await res.text();
+
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const rows = doc.querySelectorAll("tbody tr");
+
+    if (rows.length === 0) break;
+
+    let valid = 0;
+
+    rows.forEach(r => {
+      const c = r.querySelectorAll("td");
+      if (c.length < 6) return;
+
+      valid++;
+
+      all.push([
+        c[0].innerText.trim(),
+        c[1].innerText.trim(),
+        c[2].innerText.trim(),
+        c[3].innerText.trim(),
+        c[4].innerText.trim(),
+        c[5].innerText.trim()
+      ]);
+    });
+
+    if (valid === 0) break;
+
+    page++;
+  }
+
+  if (all.length === 0) {
+    document.getElementById("status").innerText = "❌ Нет данных";
+    return;
+  }
+
+  let csv = "crypto,date,usd_kzt,price_kzt,market_cap,volume\n";
+  all.forEach(r => csv += r.join(",") + "\n");
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "btc.csv";
+  a.click();
+
+  document.getElementById("status").innerText = "✅ Готово";
 }
 </script>
 
