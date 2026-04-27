@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>BTC Export</title>
+</head>
+<body>
+
+<h2>📊 Скачать BTC данные</h2>
+
+<label>Дата с:</label>
+<input type="date" id="from">
+
+<br><br>
+
+<label>Дата по:</label>
+<input type="date" id="to">
+
+<br><br>
+
+<button onclick="download()">⬇️ Скачать</button>
+
+<script>
+function formatDate(date) {
+  const d = new Date(date);
+  return d.toLocaleDateString("ru-RU");
+}
+
+function download() {
+  const from = formatDate(document.getElementById("from").value);
+  const to = formatDate(document.getElementById("to").value);
+
+  window.location.href = `/api/download?from=${from}&to=${to}`;
+}
+</script>
+
+</body>
+</html>
