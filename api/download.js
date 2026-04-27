@@ -14,7 +14,13 @@ export default async function handler(req, res) {
       p: page
     });
 
-    const response = await fetch(`${BASE_URL}?${params}`);
+    const response = await fetch(`${BASE_URL}?${params}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Language": "ru-RU,ru;q=0.9"
+      }
+    });
+
     const html = await response.text();
 
     const rows = [...html.matchAll(/<tr>(.*?)<\/tr>/gs)];
@@ -42,7 +48,10 @@ export default async function handler(req, res) {
     page++;
   }
 
-  // делаем CSV (Excel откроет)
+  if (allData.length === 0) {
+    return res.status(500).send("Нет данных (сайт блокирует)");
+  }
+
   let csv = "crypto,date,usd_kzt,price_kzt,market_cap,volume\n";
 
   allData.forEach(r => {
