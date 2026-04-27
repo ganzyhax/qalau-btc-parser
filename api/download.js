@@ -1,3 +1,4 @@
+import * as cheerio from "cheerio";
 import ExcelJS from "exceljs";
 
 export default async function handler(req, res) {
@@ -7,33 +8,47 @@ export default async function handler(req, res) {
   let all = [];
 
   while (true) {
-    const html = await fetch(
-      `https://token.qoldau.kz/ru/references/crypto-currency/list?flCryptoCurrencyType=BTC&flDate_from=${from}&flDate_to=${to}&p=${page}`
-    ).then(r => r.text());
+    const url =
+      `https://token.qoldau.kz/ru/references/crypto-currency/list?flCryptoCurrencyType=BTC&flDate_from=${from}&flDate_to=${to}&p=${page}`;
 
-    const rows = [...html.matchAll(/<tr>(.*?)<\/tr>/gs)];
+    const html = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+        "Accept": "text/html"
+      }
+    }).then(r => r.text());
+
+    const $ = cheerio.load(html);
+
+    const rows = $("tbody tr");
+
+    if (rows.length === 0) break;
 
     let valid = 0;
 
-    for (let r of rows) {
-      const cols = [...r[1].matchAll(/<td>(.*?)<\/td>/g)];
+    rows.each((i, el) => {
+      const tds = $(el).find("td");
 
-      if (cols.length < 6) continue;
+      if (tds.length < 6) return;
 
       valid++;
 
       all.push([
-        clean(cols[0][1]),
-        clean(cols[1][1]),
-        clean(cols[2][1]),
-        clean(cols[3][1]),
-        clean(cols[4][1]),
-        clean(cols[5][1]),
+        $(tds[0]).text().trim(),
+        $(tds[1]).text().trim(),
+        $(tds[2]).text().trim(),
+        $(tds[3]).text().trim(),
+        $(tds[4]).text().trim(),
+        $(tds[5]).text().trim(),
       ]);
-    }
+    });
 
     if (valid === 0) break;
     page++;
+  }
+
+  if (!all.length) {
+    return res.status(500).send("❌ Пусто — сайт изменил структуру или блокирует");
   }
 
   const wb = new ExcelJS.Workbook();
@@ -49,14 +64,8 @@ export default async function handler(req, res) {
     "Content-Type",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   );
+
   res.setHeader("Content-Disposition", "attachment; filename=btc.xlsx");
 
   res.send(buffer);
-}
-
-function clean(v) {
-  return v
-    .replace(/<.*?>/g, "")
-    .replace(/&nbsp;/g, "")
-    .trim();
 }
