@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>BTC Parser</title>
+<title>BTC Export</title>
 
 <style>
 body {
@@ -20,21 +20,51 @@ body {
   background: #1e293b;
   padding: 30px;
   border-radius: 16px;
-  width: 350px;
+  width: 360px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
 }
 
-input, button {
+h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+label {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+input {
   width: 100%;
   padding: 10px;
-  margin-top: 10px;
+  margin-top: 6px;
+  margin-bottom: 15px;
   border-radius: 8px;
   border: none;
+  outline: none;
 }
 
 button {
+  width: 100%;
+  padding: 12px;
   background: #22c55e;
+  border: none;
+  border-radius: 10px;
   color: white;
   font-weight: bold;
+  cursor: pointer;
+  font-size: 15px;
+}
+
+button:hover {
+  background: #16a34a;
+}
+
+.status {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 13px;
+  opacity: 0.8;
 }
 </style>
 </head>
@@ -44,59 +74,55 @@ button {
 <div class="card">
   <h2>📊 BTC Export</h2>
 
+  <label>Дата с:</label>
   <input type="date" id="from">
+
+  <label>Дата по:</label>
   <input type="date" id="to">
 
-  <button onclick="loadData()">Скачать CSV</button>
+  <button onclick="download()">⬇️ Скачать XLSX</button>
+
+  <div class="status" id="status"></div>
 </div>
 
 <script>
-async function loadData() {
-  const from = document.getElementById("from").value;
-  const to = document.getElementById("to").value;
+function format(date) {
+  return new Date(date).toLocaleDateString("ru-RU");
+}
 
-  let page = 1;
-  let all = [];
+async function download() {
+  const fromInput = document.getElementById("from").value;
+  const toInput = document.getElementById("to").value;
 
-  while (true) {
-    const res = await fetch(`/api/proxy?from=${from}&to=${to}&page=${page}`);
-    const html = await res.text();
-
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const rows = doc.querySelectorAll("tbody tr");
-
-    if (!rows.length) break;
-
-    let valid = 0;
-
-    rows.forEach(r => {
-      const c = r.querySelectorAll("td");
-      if (c.length < 6) return;
-
-      valid++;
-
-      all.push([
-        c[0].innerText.trim(),
-        c[1].innerText.trim(),
-        c[2].innerText.trim(),
-        c[3].innerText.trim(),
-        c[4].innerText.trim(),
-        c[5].innerText.trim()
-      ]);
-    });
-
-    if (valid === 0) break;
-    page++;
+  if (!fromInput || !toInput) {
+    alert("Выбери даты");
+    return;
   }
 
-  let csv = "crypto,date,usd_kzt,price_kzt,market_cap,volume\n";
-  all.forEach(r => csv += r.join(",") + "\n");
+  const status = document.getElementById("status");
+  status.innerText = "⏳ Загружаю данные...";
 
-  const blob = new Blob([csv], { type: "text/csv" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "btc.csv";
-  a.click();
+  try {
+    const url = `/api/download?from=${format(fromInput)}&to=${format(toInput)}`;
+
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      throw new Error("Ошибка сервера");
+    }
+
+    const blob = await res.blob();
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "btc.xlsx";
+    a.click();
+
+    status.innerText = "✅ Готово!";
+  } catch (e) {
+    console.log(e);
+    status.innerText = "❌ Ошибка загрузки";
+  }
 }
 </script>
 
