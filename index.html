@@ -1,24 +1,79 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>BTC Export</title>
+<meta charset="UTF-8">
+<title>BTC Export</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.card {
+  background: #1e293b;
+  padding: 30px;
+  border-radius: 16px;
+  width: 320px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+h2 {
+  text-align: center;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  background: #22c55e;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #16a34a;
+}
+
+.loading {
+  text-align: center;
+  margin-top: 10px;
+  display: none;
+}
+</style>
+
 </head>
 <body>
 
-<h2>📊 Скачать BTC данные</h2>
+<div class="card">
+  <h2>📊 BTC Export</h2>
 
-<label>Дата с:</label>
-<input type="date" id="from">
+  <label>Дата с:</label>
+  <input type="date" id="from">
 
-<br><br>
+  <label>Дата по:</label>
+  <input type="date" id="to">
 
-<label>Дата по:</label>
-<input type="date" id="to">
+  <button onclick="download()">Скачать CSV</button>
 
-<br><br>
-
-<button onclick="download()">⬇️ Скачать</button>
+  <div class="loading" id="loading">⏳ Загружаю...</div>
+</div>
 
 <script>
 function formatDate(date) {
@@ -27,10 +82,23 @@ function formatDate(date) {
 }
 
 function download() {
-  const from = formatDate(document.getElementById("from").value);
-  const to = formatDate(document.getElementById("to").value);
+  const from = document.getElementById("from").value;
+  const to = document.getElementById("to").value;
 
-  window.location.href = `/api/download?from=${from}&to=${to}`;
+  if (!from || !to) {
+    alert("Выбери даты");
+    return;
+  }
+
+  document.getElementById("loading").style.display = "block";
+
+  const url = `/api/download?from=${formatDate(from)}&to=${formatDate(to)}`;
+
+  window.location.href = url;
+
+  setTimeout(() => {
+    document.getElementById("loading").style.display = "none";
+  }, 2000);
 }
 </script>
 
