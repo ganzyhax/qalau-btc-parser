@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>BTC Export</title>
+<title>BTC Parser</title>
 
 <style>
 body {
@@ -23,33 +23,18 @@ body {
   width: 350px;
 }
 
-input {
+input, button {
   width: 100%;
   padding: 10px;
-  margin-top: 8px;
+  margin-top: 10px;
   border-radius: 8px;
   border: none;
 }
 
 button {
-  width: 100%;
-  margin-top: 20px;
-  padding: 12px;
   background: #22c55e;
-  border: none;
-  border-radius: 10px;
   color: white;
   font-weight: bold;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #16a34a;
-}
-
-.status {
-  margin-top: 10px;
-  font-size: 14px;
 }
 </style>
 </head>
@@ -59,48 +44,28 @@ button:hover {
 <div class="card">
   <h2>📊 BTC Export</h2>
 
-  <label>Дата с:</label>
   <input type="date" id="from">
-
-  <label>Дата по:</label>
   <input type="date" id="to">
 
   <button onclick="loadData()">Скачать CSV</button>
-
-  <div class="status" id="status"></div>
 </div>
 
 <script>
-function format(date) {
-  const d = new Date(date);
-  return d.toLocaleDateString("ru-RU");
-}
-
 async function loadData() {
   const from = document.getElementById("from").value;
   const to = document.getElementById("to").value;
-
-  if (!from || !to) {
-    alert("Выбери даты");
-    return;
-  }
-
-  document.getElementById("status").innerText = "⏳ Загружаю...";
 
   let page = 1;
   let all = [];
 
   while (true) {
-    const url =
-      `https://token.qoldau.kz/ru/references/crypto-currency/list?flCryptoCurrencyType=BTC&flDate_from=${format(from)}&flDate_to=${format(to)}&p=${page}`;
-
-    const res = await fetch(url);
+    const res = await fetch(`/api/proxy?from=${from}&to=${to}&page=${page}`);
     const html = await res.text();
 
     const doc = new DOMParser().parseFromString(html, "text/html");
     const rows = doc.querySelectorAll("tbody tr");
 
-    if (rows.length === 0) break;
+    if (!rows.length) break;
 
     let valid = 0;
 
@@ -121,13 +86,7 @@ async function loadData() {
     });
 
     if (valid === 0) break;
-
     page++;
-  }
-
-  if (all.length === 0) {
-    document.getElementById("status").innerText = "❌ Нет данных";
-    return;
   }
 
   let csv = "crypto,date,usd_kzt,price_kzt,market_cap,volume\n";
@@ -138,8 +97,6 @@ async function loadData() {
   a.href = URL.createObjectURL(blob);
   a.download = "btc.csv";
   a.click();
-
-  document.getElementById("status").innerText = "✅ Готово";
 }
 </script>
 
